@@ -49,7 +49,8 @@ class MyWindow(Window):
 
         self.page3.navbar.button1.clicked.connect(self.requestVideoInfo)
         self.page3.navbar.button3.clicked.connect(self.configureSockets)
-        self.page3.navbar.button4.clicked.connect(qApp.quit)
+        self.page3.navbar.button4.clicked.connect(self.cancelStream)
+        self.page3.navbar.button5.clicked.connect(self.quit)
 
         self.setPage(2)
 
@@ -105,12 +106,19 @@ class MyWindow(Window):
         #     self.page2.button3.show()
         #     self.page3.navbar.button3.show()
 
+    def cancelStream(self):
+        # TODO: Is it okay to directly call a QThread method? Without a signal?
+        self.udpThread.closeMediaThread()
+        Utility.sendUDPMessages(self.udpSocket, self.udpTarget, ['cancel'], True)
+    
+    def quit(self):
+        self.cancelStream()
+        qApp.quit()
+
     @pyqtSlot(QWidget)
     def requestStream(self, videoInfo):
         try:
-            # TODO: Is it okay to directly call a QThread method? Without a signal?
-            self.udpThread.closeMediaThread()
-            Utility.sendUDPMessages(self.udpSocket, self.udpTarget, ['cancel', 'tiago'], True)
+            self.cancelStream()
             i = str(self.page3.controlPanel.comboBox.currentText())
             w, h = self.resolutions[i].split(' ')
             Utility.sendUDPMessages(self.udpSocket, self.udpTarget, ['stream', 'tiago', videoInfo.fullpath, w, h], True)

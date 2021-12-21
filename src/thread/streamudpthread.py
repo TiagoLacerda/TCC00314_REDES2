@@ -57,10 +57,15 @@ class StreamUDPThread(QThread):
                             thread['thread'].close()
 
                     thread = MediaSendThread(address, self.udpSocket, self.bufferSize, w, h, fullpath)
-                    #thread = MediaSendThread(address, self.udpSocket, self.bufferSize, 96, 48, fullpath)
                     thread.logger.connect(self.log)
                     thread.start()
                     self.workers.append({'fullpath': fullpath, 'address': address, 'thread': thread})
+                    continue
+
+                if command == 'cancel':
+                    for thread in self.workers:
+                        if thread['address'] == address:
+                            thread['thread'].close()
                     continue
 
             except socket.timeout as e:

@@ -46,7 +46,8 @@ class MyWindow(Window):
         self.udpThread.start()
 
         self.navbar.button1.clicked.connect(self.showFileDialog)
-        self.navbar.button4.clicked.connect(self.quit)
+        self.navbar.button4.hide()
+        self.navbar.button5.clicked.connect(self.quit)
 
     @pyqtSlot(str)
     def log(self, message):
