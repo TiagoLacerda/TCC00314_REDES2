@@ -10,15 +10,15 @@ class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Redes de Computadores II - Streaming Server")
-        self.setWindowIcon(QIcon('src/assets/images/clapperboard-black.png'))
         self.setMinimumSize(640, 480)
         self.resize(800, 600)
-        self.setStyleSheet('background-color: #1e1e1e; color: white; font-size: 16px; font-weight: bold; font-family: Consolas;')
-
-        # --------------------------------------------------
-        # Navbar
+        self.setStyleSheet('background-color: #0f0f0f; color: white; font-size: 16px; font-weight: bold; font-family: Consolas;')
 
         self.navbar = Navbar()
+        self.navbar.addButton(icon_path='src/assets/images/film-solid.png',     color='#286ed2', color_hover='#1e529d', color_press='#143769')
+        self.navbar.addSeparator()
+        self.navbar.addButton(icon_path='src/assets/images/sync-alt-solid.png', color='#82af69', color_hover='#5f8849', color_press='#3f5b30')
+        self.navbar.addButton(icon_path='src/assets/images/times-solid.png',    color='#d72337', color_hover='#a11a29', color_press='#500c14')
 
         # --------------------------------------------------
         # List of videos
@@ -43,7 +43,7 @@ class Window(QMainWindow):
         self.plaintextedit = QPlainTextEdit()
         self.plaintextedit.setLineWrapMode(QPlainTextEdit.WidgetWidth)
         self.plaintextedit.setReadOnly(True)
-        self.plaintextedit.setStyleSheet('border: 0px solid white;')
+        self.plaintextedit.setStyleSheet('border: 0px solid white; color: #b6b6b6; font-size: 14px; font-weight: 700; font-family: Consolas;')
 
         # --------------------------------------------------
 

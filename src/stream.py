@@ -1,4 +1,3 @@
-
 import sys
 from PyQt5 import QtWidgets
 import cv2
@@ -45,9 +44,10 @@ class MyWindow(Window):
         self.deleteVideoInfoSignal.connect(self.udpThread.deleteVideoInfo)
         self.udpThread.start()
 
-        self.navbar.button1.clicked.connect(self.showFileDialog)
-        self.navbar.button4.hide()
-        self.navbar.button5.clicked.connect(self.quit)
+        self.navbar.buttons[0].clicked.connect(self.showFileDialog)
+        self.navbar.buttons[1].clicked.connect(lambda: self.log('Botão de refresh ainda não implementado'))
+        self.navbar.buttons[1].hide()
+        self.navbar.buttons[2].clicked.connect(self.quit)
 
     @pyqtSlot(str)
     def log(self, message):
@@ -81,7 +81,7 @@ class MyWindow(Window):
 
                 self.log('\nfullpath: {}\ncwd:      {}\npath:     {}\ntitle:    {}\n'.format(fullpath, cwd, path, title))
 
-                widget = VideoInfo(fullpath, title, thumbnail, read_only=False, icon_path='src/assets/images/trashcan.png')
+                widget = VideoInfo(fullpath, title, thumbnail, read_only=False, icon_path='src/assets/images/trash-alt-solid.png')
                 widget.button.clicked.connect(self.deleteVideoInfo)
                 self.videoListLayout.insertWidget(0, widget)
 

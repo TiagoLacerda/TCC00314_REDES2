@@ -55,14 +55,14 @@ class MediaThread(QThread):
             audioDone = False
 
             # Get debug dialog
-            gui = None
-            for widget in qApp.topLevelWidgets():
-                if isinstance(widget, QMainWindow):
-                    gui = widget
-                    break
+            # gui = None
+            # for widget in qApp.topLevelWidgets():
+            #     if isinstance(widget, QMainWindow):
+            #         gui = widget
+            #         break
 
-            dialog = gui.integrityDialog
-            self.integritySignal.connect(dialog.integrity.refresh)
+            # dialog = gui.integrityDialog
+            # self.integritySignal.connect(dialog.integrity.refresh)
 
             self.pa = pyaudio.PyAudio()
             self.audioStream = self.pa.open(
@@ -135,7 +135,7 @@ class MediaThread(QThread):
                     audioDone = True
 
             # After all has been played
-            self.integritySignal.emit(self.metadata, self.videoFrames, self.audioFrames, videoFrameIndex, audioFrameIndex)
+            # self.integritySignal.emit(self.metadata, self.videoFrames, self.audioFrames, videoFrameIndex, audioFrameIndex)
 
         except Exception as e:
             raise e

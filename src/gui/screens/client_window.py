@@ -42,7 +42,7 @@ class LoginPage(QWidget):
         self.label4 = QLabel('')
         self.label4.setStyleSheet('color: #d72337;')
 
-        self.button3 = RoundPushButton(icon_path='src/assets/images/refresh.png', color='#82af69', color_hover='#5f8849', color_press='#3f5b30')
+        self.button3 = RoundPushButton(icon_path='src/assets/images/sync-alt-solid.png', color='#82af69', color_hover='#5f8849', color_press='#3f5b30')
         self.button3.hide()
 
         self.layout = QVBoxLayout()
@@ -109,7 +109,7 @@ class RegisterPage(QWidget):
         self.label4 = QLabel('')
         self.label4.setStyleSheet('color: #d72337;')
 
-        self.button3 = RoundPushButton(icon_path='src/assets/images/refresh.png', color='#82af69', color_hover='#5f8849', color_press='#3f5b30')
+        self.button3 = RoundPushButton(icon_path='src/assets/images/sync-alt-solid.png', color='#82af69', color_hover='#5f8849', color_press='#3f5b30')
         self.button3.hide()
 
         self.layout = QVBoxLayout()
@@ -150,13 +150,17 @@ class MainPage(QWidget):
         # Navbar
 
         self.navbar = Navbar()
+        self.navbar = Navbar()
+        self.navbar.addButton(icon_path='src/assets/images/film-solid.png',     color='#286ed2', color_hover='#1e529d', color_press='#143769')
+        self.navbar.addButton(icon_path='src/assets/images/stop-solid.png',     color='#d72337', color_hover='#a11a29', color_press='#500c14')
+        self.navbar.addButton(icon_path='src/assets/images/sync-alt-solid.png', color='#82af69', color_hover='#5f8849', color_press='#3f5b30')
+        self.navbar.addSeparator()
+        self.navbar.addButton(icon_path='src/assets/images/times-solid.png',    color='#d72337', color_hover='#a11a29', color_press='#500c14')
 
-        # --------------------------------------------------
-        # Room management
+        # Room and resolution control
 
         self.controlPanel = ControlPanel()
 
-        # --------------------------------------------------
         # Media
 
         self.mediaVideoLabel = QLabel()
@@ -167,26 +171,22 @@ class MainPage(QWidget):
 
         self.containerMLayout = QVBoxLayout()
         self.containerMLayout.addWidget(self.mediaVideoLabel, alignment=Qt.AlignCenter)
-        # self.mediaContainerLayout.addWidget(self.mediaTitleLabel)
 
         self.mediaPanel = QWidget()
         self.mediaPanel.setLayout(self.containerMLayout)
         self.mediaPanel.setStyleSheet('background-color: black;')
 
-        # --------------------------------------------------
         # Video selection
 
         self.videoPanel = VideoPanel()
 
-        # --------------------------------------------------
         # Logger
 
         self.plaintextedit = QPlainTextEdit()
         self.plaintextedit.setLineWrapMode(QPlainTextEdit.WidgetWidth)
         self.plaintextedit.setReadOnly(True)
-        self.plaintextedit.setStyleSheet('border: 0px solid white; font-weight: 600; font-family: Consolas;')
+        self.plaintextedit.setStyleSheet('border: 0px solid white; color: #b6b6b6; font-size: 14px; font-weight: 700; font-family: Consolas;')
 
-        # --------------------------------------------------
         # Where it all comes together
 
         self.screenHSplitter = QSplitter()
@@ -218,7 +218,6 @@ class Window(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Redes de Computadores II - Client")
-        self.setWindowIcon(QIcon('src/assets/images/clapperboard-black.png'))
         self.setMinimumSize(640, 480)
         self.resize(800, 600)
 
@@ -238,7 +237,7 @@ class Window(QMainWindow):
 
         # ------------------- STYLESHEET -------------------
 
-        self.setStyleSheet('background-color: #1e1e1e; color: white; font-size: 16px; font-weight: bold; font-family: Roboto;')
+        self.setStyleSheet('background-color: #0f0f0f; color: white; font-size: 16px; font-weight: bold; font-family: Roboto;')
 
 
 # app = QApplication(sys.argv)

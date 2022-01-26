@@ -1,11 +1,13 @@
 import socket
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QByteArray, QBuffer, QIODevice
+from PyQt5 import QtCore
 from PyQt5.QtGui import QPixmap
 
 from utility import Utility
 from thread.mediasendthread import MediaSendThread
 from requests import get as getPublicIP
 
+import sys
 
 class StreamUDPThread(QThread):
     logger = pyqtSignal(str)
@@ -18,7 +20,7 @@ class StreamUDPThread(QThread):
 
         self.closing = False
 
-        self.workers = []    # {fullpath: '', address: '', thread: MediaSendThread}
+        self.workers = {}    # address: {fullpath: str, thread: MediaSendThread}
         self.videoList = []  # (fullpath: '', title: '',    thumbnail: QPixmap)
 
     def run(self):
@@ -30,17 +32,20 @@ class StreamUDPThread(QThread):
         while not self.closing:
             try:
                 messages, address = Utility.recvUDPMessages(self.udpSocket, self.bufferSize)
-                self.log('{} says {}'.format(address, messages))
-
                 command = messages[0].decode()
 
-                if command == 'ping':
-                    Utility.sendUDPMessages(self.udpSocket, address, ['pong'], True)
-                    continue
-
                 if command == 'videoinfolist':
+                    self.log('{} says ["{}"]'.format(address, command))
+
                     for item in self.videoList:
-                        data = ['videoinfo'.encode(), item['fullpath'].encode(), item['title'].encode(), 'thumbnail'.encode()]
+                        # https://stackoverflow.com/questions/57404778/how-to-convert-a-qpixmaps-image-into-a-bytes
+                        qByteArray = QByteArray()
+                        qBuffer = QBuffer(qByteArray)
+                        qBuffer.open(QIODevice.WriteOnly)
+                        item['thumbnail'].save(qBuffer, 'JPG')
+                        thumbnail = qByteArray.data()
+
+                        data = ['videoinfo'.encode(), item['fullpath'].encode(), item['title'].encode(), thumbnail]
                         Utility.sendUDPMessages(self.udpSocket, address, data)
                     continue
 
@@ -50,28 +55,41 @@ class StreamUDPThread(QThread):
                     w = int(messages[3].decode())
                     h = int(messages[4].decode())
 
+                    self.log('{} says ["{}", "{}", "{}", "{}", "{}"]'.format(address, command, username, fullpath, w, h))
+
                     # TODO: If user is premium, start mediasendthread, else, send denial message
 
-                    for thread in self.workers:
-                        if thread['address'] == address:
-                            thread['thread'].close()
+                    if address in self.workers:
+                        self.workers[address]['thread'].close()
+                        del self.workers[address]
 
                     thread = MediaSendThread(address, self.udpSocket, self.bufferSize, w, h, fullpath)
                     thread.logger.connect(self.log)
                     thread.start()
-                    self.workers.append({'fullpath': fullpath, 'address': address, 'thread': thread})
+                    self.workers[address] = {'fullpath': fullpath, 'thread': thread}
                     continue
 
                 if command == 'cancel':
-                    for thread in self.workers:
-                        if thread['address'] == address:
-                            thread['thread'].close()
+                    self.log('{} says ["{}"]'.format(address, command))
+                    
+                    if address in self.workers:
+                        self.workers[address]['thread'].close()
+                        del self.workers[address]
                     continue
 
             except socket.timeout as e:
                 continue
             except Exception as e:
-                self.log('{}: {}'.format(self, e))
+                # self.log('{}: {} {}'.format(self, e, command))
+                exception_type, exception_object, exception_traceback = sys.exc_info()
+                filename = exception_traceback.tb_frame.f_code.co_filename
+                line_number = exception_traceback.tb_lineno
+                self.log('Exception thrown: File({}) Line({})'.format(filename, line_number))
+                if address in self.workers:
+                    self.workers[address]['thread'].close()
+                    del self.workers[address]
+
+
 
     @pyqtSlot(str)
     def log(self, message):
@@ -94,7 +112,7 @@ class StreamUDPThread(QThread):
             if item['fullpath'] == fullpath:
                 self.videoList.remove(item)
 
-        for item in self.workers:
-            if item['fullpath'] == fullpath:
-                item['thread'].close()
-                self.workers.remove(item)
+        for address in self.workers:
+            if self.workers[address]['fullpath'] == fullpath:
+                self.workers[address]['thread'].close()
+                del self.workers[address]

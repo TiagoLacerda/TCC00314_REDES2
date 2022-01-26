@@ -34,6 +34,14 @@ class Database():
         self.users = []
         self.rooms = []
 
+    def __str__(self):
+        string = ''
+        for user in self.users:
+            string += (user.__str__() + '\n')
+        for room in self.rooms:
+            string += (room.__str__() + '\n')
+        return string
+
     # --------------------------------------------------
 
     def insertUser(self, username: str, password: str, premium: bool):
@@ -82,7 +90,10 @@ class Database():
                     isAdmin = True
 
             if not isAdmin:
-                self.rooms.append(Room(user, []))
+                room = Room(user, [])
+                self.rooms.append(room)
+                return room
+        return None
 
     def selectRoom(self, username: str):
         user = self.selectUser(username)
@@ -110,3 +121,65 @@ class Database():
             room = self.selectRoom(user.username)
             if room is not None:
                 self.rooms.remove(room)
+
+    def insertMember(self, admin_username, member_username):
+        admin = self.selectUser(admin_username)
+        if admin:
+            member = self.selectUser(member_username)
+            if member:
+                room = self.selectRoom(admin.username)
+                if room:
+                    if member not in room.members:
+                        room.members.append(member)
+                        return member
+        return None
+
+    def deleteMember(self, admin_username, member_username):
+        admin = self.selectUser(admin_username)
+        if admin:
+            member = self.selectUser(member_username)
+            if member:
+                room = self.selectRoom(admin.username)
+                if room:
+                    if member in room.members:
+                        room.members.remove(member)
+                        return member
+        return None
+
+    # --------------------------------------------------
+
+    def isMember(self, username: str):
+        for room in self.rooms:
+            usernames = [member.username for member in room.members]
+            if username in usernames:
+                return True
+        return False
+
+    def isAdmin(self, username: str):
+        for room in self.rooms:
+            if username == room.admin.username:
+                return True
+        return False
+
+    def isMemberOrAdmin(self, username: str):
+        return self.isMember(username) or self.isAdmin(username)
+
+    def selectRoomByMember(self, username: str):
+        for room in self.rooms:
+            usernames = [member.username for member in room.members]
+            if username in usernames:
+                return room
+        return None
+
+    def selectRoomByMemberOrAdmin(self, username: str):
+        for room in self.rooms:
+            usernames = [member.username for member in room.members]
+            if username == room.admin.username or username in usernames:
+                return room
+        return None
+
+    def selectAdminByMemberOrAdmin(self, username: str):
+        room = self.selectRoomByMemberOrAdmin(username)
+        if room:
+            return room.admin
+        return None

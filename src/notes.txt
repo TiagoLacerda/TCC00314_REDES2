@@ -39,3 +39,38 @@ Cyan:
 75%:  #2c8686
 50%:  #1d5959
 25%:  #0e2c2c
+
+
+
+        # Mensagens TCP que a gente precisa:
+        # foo(username) -> grupo :: (User, list)
+        #
+
+        # if self.user.premium:
+        #     if # é membro ou admin de algum grupo
+        #         # 1: Você já é membro de um grupo
+        #         # 3: <lista os membros>
+        #         if # é o admin
+        #             # 2: <deleta o grupo>
+        #             # 4: <remove membro do grupo>
+        #             # 5: <adiciona membro ao grupo>
+        #         else
+        #             # 2: <sai do grupo>
+        #             # 4: Você n é admin
+        #             # 5: Você n é admin
+        #     else
+        #         # 1: <cria um grupo>
+        #         # 2: Você não é membro de nenhum grupo
+        #         # 3: Você não é membro de nenhum grupo
+        #         # 4: Você nao é admin de nenhum grupo
+        #         # 5: Você nao é admin de nenhum grupo
+        # else:
+        #     # 1: Você não é usuário premium
+        #     # 4: Você não é usuário premium
+        #     # 5: Você não é usuário premium
+        #     if # é membro de algum grupo:
+        #         # 2: <sai do grupo>
+        #         # 3: <lista os membros>
+        #     else:
+        #         # 2: Você não é membro de nenhum grupo
+        #         # 3: Você não é membro de nenhum grupo

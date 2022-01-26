@@ -95,7 +95,7 @@ class MediaSendThread(QThread):
 
                 if elapsed >= 1.0:
                     elapsed = 0.0
-                    self.log('Video: {:.2f}% Audio: {:.2f}%'.format(100.0 * videoPercentage, 100.0 * audioPercentage))
+                    # self.log('Video: {:.2f}% Audio: {:.2f}%'.format(100.0 * videoPercentage, 100.0 * audioPercentage))
 
                 if videoPercentage <= audioPercentage:
                     read, array = capture.read()
@@ -131,7 +131,7 @@ class MediaSendThread(QThread):
         except Exception as e:
             self.log('{}: {}'.format(self, e))
             self.close()
-
+        
         self.log('Closing MediaSendThread...')
 
     def log(self, message):
