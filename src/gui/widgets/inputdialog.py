@@ -13,6 +13,7 @@ class InputDialog(QDialog):
         self.setStyleSheet('background-color: #1f1f1f; color: white; font-size: 16px; font-weight: bold; font-family: Roboto;')
         self.setWindowTitle(title)
         self.setWindowModality(Qt.ApplicationModal)
+        self.setMinimumWidth(300)
 
         self.layout = QVBoxLayout()
         self.lineEdits = []

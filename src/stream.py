@@ -31,23 +31,41 @@ class MyWindow(Window):
         self.envoyLength = 4
         self.bufferSize = 2**14  # 2**15 = 65536, 2**12 = 4096
 
-        self.tcpTarget = ('localhost', 6060)
-        self.tcpSocket = None
+        self.navbar.buttons[0].clicked.connect(self.showFileDialog)
+        self.navbar.buttons[1].clicked.connect(self.configureTCPSocket)
+        self.navbar.buttons[1].hide()
+        self.navbar.buttons[2].clicked.connect(self.quit)
 
         self.udpTarget = ('localhost', 50505)
         self.udpSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.udpSocket.settimeout(1.0)
         self.udpSocket.bind(self.udpTarget)
 
-        self.udpThread = StreamUDPThread(self.udpTarget, self.udpSocket, self.bufferSize)
+        self.tcpTarget = ('localhost', 6060)
+        self.tcpSocket = None
+
+        self.configureTCPSocket()
+
+        self.udpThread = StreamUDPThread(self.tcpTarget, self.tcpSocket, self.envoyLength, self.udpTarget, self.udpSocket, self.bufferSize)
         self.udpThread.logger.connect(self.log)
         self.insertVideoInfoSignal.connect(self.udpThread.insertVideoInfo)
         self.deleteVideoInfoSignal.connect(self.udpThread.deleteVideoInfo)
         self.udpThread.start()
 
-        self.navbar.buttons[0].clicked.connect(self.showFileDialog)
-        self.navbar.buttons[1].clicked.connect(lambda: self.log('Botão de refresh ainda não implementado'))
-        self.navbar.buttons[1].hide()
-        self.navbar.buttons[2].clicked.connect(self.quit)
+    # TODO: Do I need to reopen sockets that raised exceptions?
+
+    def configureTCPSocket(self):
+        if self.tcpSocket is not None:
+            self.tcpSocket.close()
+
+        self.tcpSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+
+        try:
+            self.navbar.buttons[1].hide()
+            self.tcpSocket.connect(self.tcpTarget)
+        except Exception as e:
+            self.navbar.buttons[1].show()
+            self.log(str(e))
 
     @pyqtSlot(str)
     def log(self, message):

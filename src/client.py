@@ -1,22 +1,20 @@
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication, QDialog, QWidget, qApp
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QApplication, QWidget, qApp
 from PyQt5.QtGui import QPixmap
 from datetime import datetime
 
 import sys
 import socket
 import subprocess
-from gui.screens.integritydialog import IntegrityDialog
 from gui.widgets.inputdialog import InputDialog
-from gui.widgets.integrity import Integrity
+from gui.widgets.streamtypedialog import StreamTypeDialog
 from gui.widgets.videoinfo import VideoInfo
 from thread.clientudpthread import ClientUDPThread
 
 from utility import Utility
 
 from gui.screens.client_window import Window
-from thread.mediathread import MediaThread
-from database import Database, User, Room
+from database import User
 
 
 class MyWindow(Window):
@@ -24,10 +22,30 @@ class MyWindow(Window):
         super().__init__()
 
         self.user = None
-
-        # Media stuff
-
         self.resolutions = {'240p': '426 240', '480p': '854 480', '720p': '1280 720'}
+
+        # PyQt stuff
+
+        self.page1.button1.clicked.connect(self.login)
+        self.page1.button2.clicked.connect(lambda: self.setPage(1))
+        self.page1.button3.clicked.connect(self.configureSockets)
+
+        self.page2.button1.clicked.connect(self.register)
+        self.page2.button2.clicked.connect(lambda: self.setPage(0))
+        self.page1.button3.clicked.connect(self.configureSockets)
+
+        self.page3.navbar.buttons[0].clicked.connect(self.refresh)
+        self.page3.navbar.buttons[1].clicked.connect(self.cancelStream)
+        self.page3.navbar.buttons[2].clicked.connect(self.configureSockets)
+        self.page3.navbar.buttons[3].clicked.connect(self.logout)
+
+        self.page3.controlPanel.button1.clicked.connect(self.controlPanelButton1Function)
+        self.page3.controlPanel.button2.clicked.connect(self.controlPanelButton2Function)
+        self.page3.controlPanel.button3.clicked.connect(self.controlPanelButton3Function)
+        self.page3.controlPanel.button4.clicked.connect(self.controlPanelButton4Function)
+        self.page3.controlPanel.button5.clicked.connect(self.controlPanelButton5Function)
+
+        self.setPage(0)
 
         # Socket stuff
 
@@ -48,31 +66,7 @@ class MyWindow(Window):
         self.udpThread.insertVideoInfoSignal.connect(self.insertVideoInfo)
         self.udpThread.start()  # TODO: Do this after init
 
-        # PyQt stuff
 
-        self.page1.button1.clicked.connect(self.login)
-        self.page1.button2.clicked.connect(lambda: self.setPage(1))
-        self.page1.button3.clicked.connect(self.configureSockets)
-
-        self.page2.button1.clicked.connect(self.register)
-        self.page2.button2.clicked.connect(lambda: self.setPage(0))
-        self.page1.button3.clicked.connect(self.configureSockets)
-
-        self.page3.navbar.buttons[0].clicked.connect(self.refresh)
-        self.page3.navbar.buttons[1].clicked.connect(self.cancelStream)
-        self.page3.navbar.buttons[2].clicked.connect(self.configureSockets)
-        self.page3.navbar.buttons[3].clicked.connect(self.logout)
-
-        # self.integrityDialog = IntegrityDialog()
-        # self.integrityDialog.open()
-
-        self.page3.controlPanel.button1.clicked.connect(self.controlPanelButton1Function)
-        self.page3.controlPanel.button2.clicked.connect(self.controlPanelButton2Function)
-        self.page3.controlPanel.button3.clicked.connect(self.controlPanelButton3Function)
-        self.page3.controlPanel.button4.clicked.connect(self.controlPanelButton4Function)
-        self.page3.controlPanel.button5.clicked.connect(self.controlPanelButton5Function)
-
-        self.setPage(0)
 
     def getUserInfo(self, username: str):
         self.setAlert('')
@@ -91,40 +85,76 @@ class MyWindow(Window):
         return isMemberOrAdmin, isAdmin
 
     def controlPanelButton1Function(self):
-        isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
+        try:
+            self.setAlert('')
+            self.page1.button3.hide()
+            self.page2.button3.hide()
+            self.page3.navbar.buttons[2].hide()
 
-        if self.user.premium:
-            if isMemberOrAdmin:
-                self.setAlert('Você já pertence a um grupo')
-            else:
-                # Criar o grupo
-                Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'insert_room'.encode('utf-8'))
-                Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
-                response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
-                success = True if response == 'True' else False
-                if success:
-                    self.setAlert('Grupo criado com sucesso')
+            #
+
+            isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
+            if self.user.premium:
+                if isMemberOrAdmin:
+                    self.setAlert('Você já pertence a um grupo')
                 else:
-                    self.setAlert('Ocorreu um erro ao criar o grupo')
-        else:
-            self.setAlert('Você não é um usuário Premium')
-
-    def controlPanelButton2Function(self):
-        isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
-
-        if self.user.premium:
-            if isMemberOrAdmin:
-                if isAdmin:
-                    # Deletar o grupo
-                    Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'delete_room'.encode('utf-8'))
+                    # Criar o grupo
+                    Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'insert_room'.encode('utf-8'))
                     Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
                     response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
                     success = True if response == 'True' else False
                     if success:
-                        self.setAlert('Grupo deletado com sucesso')
+                        self.setAlert('Grupo criado com sucesso')
                     else:
-                        self.setAlert('Ocorreu um erro ao deletar o grupo')
+                        self.setAlert('Ocorreu um erro ao criar o grupo')
+            else:
+                self.setAlert('Você não é um usuário Premium')
+
+        except Exception as e:
+            self.setAlert('Falha na conexão!')
+            self.log(str(e))
+            self.page1.button3.show()
+            self.page2.button3.show()
+            self.page3.navbar.buttons[2].show()
+
+    def controlPanelButton2Function(self):
+        try:
+            self.setAlert('')
+            self.page1.button3.hide()
+            self.page2.button3.hide()
+            self.page3.navbar.buttons[2].hide()
+
+            #
+
+            isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
+            if self.user.premium:
+                if isMemberOrAdmin:
+                    if isAdmin:
+                        # Deletar o grupo
+                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'delete_room'.encode('utf-8'))
+                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
+                        response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+                        success = True if response == 'True' else False
+                        if success:
+                            self.setAlert('Grupo deletado com sucesso')
+                        else:
+                            self.setAlert('Ocorreu um erro ao deletar o grupo')
+                    else:
+                        # Deixar o grupo
+                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'select_admin_by_member_or_admin'.encode('utf-8'))
+                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
+                        response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+
+                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'delete_member'.encode('utf-8'))
+                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, response.encode('utf-8'))
+                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
+                        response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+
+                        self.setAlert(response)
                 else:
+                    self.setAlert('Você não pertence a nenhum grupo')
+            else:
+                if isMemberOrAdmin:
                     # Deixar o grupo
                     Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'select_admin_by_member_or_admin'.encode('utf-8'))
                     Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
@@ -136,99 +166,133 @@ class MyWindow(Window):
                     response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
 
                     self.setAlert(response)
-            else:
-                self.setAlert('Você não pertence a nenhum grupo')
-        else:
+                else:
+                    self.setAlert('Você não pertence a nenhum grupo')
+
+        except Exception as e:
+            self.setAlert('Falha na conexão!')
+            self.log(str(e))
+            self.page1.button3.show()
+            self.page2.button3.show()
+            self.page3.navbar.buttons[2].show()
+
+    def controlPanelButton3Function(self):
+        try:
+            self.setAlert('')
+            self.page1.button3.hide()
+            self.page2.button3.hide()
+            self.page3.navbar.buttons[2].hide()
+
+            #
+
+            isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
             if isMemberOrAdmin:
-                # Deixar o grupo
+                # Listar os membros
                 Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'select_admin_by_member_or_admin'.encode('utf-8'))
                 Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
                 response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
 
-                Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'delete_member'.encode('utf-8'))
+                Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'select_members'.encode('utf-8'))
                 Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, response.encode('utf-8'))
-                Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
                 response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
 
-                self.setAlert(response)
+                count = int(response)
+
+                if count > 0:
+                    admin = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+                    members = []
+                    for i in range(count - 1):
+                        name = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+                        addr = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+                        members.append([name, addr])
+
+                    text = '\n  Administrador:\n   {}\n  Membros:\n'.format(admin)
+                    for member in members:
+                        text += '   {} @ {}\n'.format(member[0], member[1])
+
+                    self.log(text)
             else:
                 self.setAlert('Você não pertence a nenhum grupo')
 
-    def controlPanelButton3Function(self):
-        isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
-
-        if isMemberOrAdmin:
-            # Listar os membros
-            Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'select_admin_by_member_or_admin'.encode('utf-8'))
-            Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
-            response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
-
-            Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'select_members'.encode('utf-8'))
-            Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, response.encode('utf-8'))
-            response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
-
-            count = int(response)
-
-            if count > 0:
-                admin = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
-                members = []
-                for i in range(count - 1):
-                    name = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
-                    addr = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
-                    members.append([name, addr])
-
-                text = '\n  Administrador:\n   {}\n  Membros:\n'.format(admin)
-                for member in members:
-                    text += '   {} @ {}\n'.format(member[0], member[1])
-
-                self.log(text)
-        else:
-            self.setAlert('Você não pertence a nenhum grupo')
+        except Exception as e:
+            self.setAlert('Falha na conexão!')
+            self.log(str(e))
+            self.page1.button3.show()
+            self.page2.button3.show()
+            self.page3.navbar.buttons[2].show()
 
     def controlPanelButton4Function(self):
-        isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
+        try:
+            self.setAlert('')
+            self.page1.button3.hide()
+            self.page2.button3.hide()
+            self.page3.navbar.buttons[2].hide()
 
-        if self.user.premium:
-            if isMemberOrAdmin:
-                if isAdmin:
-                    # Remove membro do grupo
-                    dialog = InputDialog(title='Remover membro', labels=['Nome de usuário'])
-                    dialog.exec()
-                    if dialog.result() == 1:
-                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'delete_member'.encode('utf-8'))
-                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
-                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, dialog.lineEdits[0].text().encode('utf-8'))
-                        response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+            #
 
-                        self.setAlert(response)
+            isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
+            if self.user.premium:
+                if isMemberOrAdmin:
+                    if isAdmin:
+                        # Remove membro do grupo
+                        dialog = InputDialog(title='Remover membro', labels=['Nome de usuário'])
+                        dialog.exec()
+                        if dialog.result() == 1:
+                            Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'delete_member'.encode('utf-8'))
+                            Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
+                            Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, dialog.lineEdits[0].text().encode('utf-8'))
+                            response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+
+                            self.setAlert(response)
+                    else:
+                        self.setAlert('Você não é administrador deste grupo')
                 else:
-                    self.setAlert('Você não é administrador deste grupo')
+                    self.setAlert('Você não administra nenhum grupo')
             else:
-                self.setAlert('Você não administra nenhum grupo')
-        else:
-            self.setAlert('Você não é um usuário Premium')
+                self.setAlert('Você não é um usuário Premium')
+
+        except Exception as e:
+            self.setAlert('Falha na conexão!')
+            self.log(str(e))
+            self.page1.button3.show()
+            self.page2.button3.show()
+            self.page3.navbar.buttons[2].show()
 
     def controlPanelButton5Function(self):
-        isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
+        try:
+            self.setAlert('')
+            self.page1.button3.hide()
+            self.page2.button3.hide()
+            self.page3.navbar.buttons[2].hide()
 
-        if self.user.premium:
-            if isMemberOrAdmin:
-                if isAdmin:
-                    # Insere membro no grupo
-                    dialog = InputDialog(title='Inserir membro', labels=['Nome de usuário'])
-                    dialog.exec()
-                    if dialog.result() == 1:
-                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'insert_member'.encode('utf-8'))
-                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
-                        Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, dialog.lineEdits[0].text().encode('utf-8'))
-                        response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
-                        self.setAlert(response)
+            #
+
+            isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
+            if self.user.premium:
+                if isMemberOrAdmin:
+                    if isAdmin:
+                        # Insere membro no grupo
+                        dialog = InputDialog(title='Inserir membro', labels=['Nome de usuário'])
+                        dialog.exec()
+                        if dialog.result() == 1:
+                            Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'insert_member'.encode('utf-8'))
+                            Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, self.user.username.encode('utf-8'))
+                            Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, dialog.lineEdits[0].text().encode('utf-8'))
+                            response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+                            self.setAlert(response)
+                    else:
+                        self.setAlert('Você não é administrador deste grupo')
                 else:
-                    self.setAlert('Você não é administrador deste grupo')
+                    self.setAlert('Você não administra nenhum grupo')
             else:
-                self.setAlert('Você não administra nenhum grupo')
-        else:
-            self.setAlert('Você não é um usuário Premium')
+                self.setAlert('Você não é um usuário Premium')
+
+        except Exception as e:
+            self.setAlert('Falha na conexão!')
+            self.log(str(e))
+            self.page1.button3.show()
+            self.page2.button3.show()
+            self.page3.navbar.buttons[2].show()
 
     @pyqtSlot(str)
     def log(self, message):
@@ -279,7 +343,7 @@ class MyWindow(Window):
     def cancelStream(self):
         # TODO: Is it okay to directly call a QThread method? Without a signal?
         self.udpThread.closeMediaThread()
-        Utility.sendUDPMessages(self.udpSocket, self.udpTarget, ['cancel'], True)
+        Utility.sendUDPMessages(self.udpSocket, self.udpTarget, [self.user.username, 'cancel'], True)
 
     def quit(self):
         self.cancelStream()
@@ -288,23 +352,61 @@ class MyWindow(Window):
     @pyqtSlot(QWidget)
     def requestStream(self, videoInfo):
         try:
-            self.cancelStream()
-            i = str(self.page3.controlPanel.resolutionComboBox.currentText())
-            w, h = self.resolutions[i].split(' ')
-            Utility.sendUDPMessages(self.udpSocket, self.udpTarget, ['stream', self.user.username, videoInfo.fullpath, w, h], True)
+            self.setAlert('')
+            self.page1.button3.hide()
+            self.page2.button3.hide()
+            self.page3.navbar.buttons[2].hide()
+
+            #
+
+            if not self.user.premium:
+                self.setAlert('Você não é um usuário premium')
+            else:
+                isMemberOrAdmin, isAdmin = self.getUserInfo(self.user.username)
+                self.cancelStream()
+                i = str(self.page3.controlPanel.resolutionComboBox.currentText())
+                w, h = self.resolutions[i].split(' ')
+
+                if isAdmin:
+                    dialog = StreamTypeDialog()
+                    dialog.exec()
+
+                    if dialog.option == 1:
+                        Utility.sendUDPMessages(self.udpSocket, self.udpTarget, [self.user.username, 'stream', videoInfo.fullpath, w, h], True)
+                    elif dialog.option == 2:
+                        Utility.sendUDPMessages(self.udpSocket, self.udpTarget, [self.user.username, 'stream_group', videoInfo.fullpath, w, h], True)
+                else:
+                    Utility.sendUDPMessages(self.udpSocket, self.udpTarget, [self.user.username, 'stream', videoInfo.fullpath, w, h], True)
+
         except Exception as e:
+            self.setAlert('Falha na conexão!')
             self.log(str(e))
+            self.page1.button3.show()
+            self.page2.button3.show()
+            self.page3.navbar.buttons[2].show()
 
     def requestVideoInfo(self):
         try:
+            self.setAlert('')
+            self.page1.button3.hide()
+            self.page2.button3.hide()
+            self.page3.navbar.buttons[2].hide()
+
+            #
+
             videoListLayout = self.page3.videoPanel.listLayout
             for i in range(videoListLayout.count()):
                 widget = videoListLayout.itemAt(i).widget()
                 if widget is not None:
                     widget.deleteLater()
-            Utility.sendUDPMessages(self.udpSocket, self.udpTarget, ['videoinfolist'], True)
+            Utility.sendUDPMessages(self.udpSocket, self.udpTarget, [self.user.username, 'videoinfolist'], True)
+
         except Exception as e:
-            print(str(e))
+            self.setAlert('Falha na conexão!')
+            self.log(str(e))
+            self.page1.button3.show()
+            self.page2.button3.show()
+            self.page3.navbar.buttons[2].show()
 
     @pyqtSlot(str, str, QPixmap)
     def insertVideoInfo(self, fullpath, title, thumbnail):
@@ -319,13 +421,24 @@ class MyWindow(Window):
         widget.mouseReleaseSignal.connect(self.requestStream)
         videoListLayout.insertWidget(0, widget)
 
-    # TODO: Request whether am room admin,
-    def requestRoomsInfo(self):
-        pass
-
+    
     def refresh(self):
-        self.requestVideoInfo()
-        self.requestRoomsInfo()
+        try:
+            self.setAlert('')
+            self.page1.button3.hide()
+            self.page2.button3.hide()
+            self.page3.navbar.buttons[2].hide()
+            
+            #
+
+            self.requestVideoInfo()
+
+        except:
+            self.setAlert('Falha na Conexão')
+            self.page1.button3.show()
+            self.page2.button3.show()
+            self.page3.navbar.buttons[2].show()
+        
 
     def login(self):
         username = self.page1.lineEdit1.text().strip()
@@ -353,7 +466,7 @@ class MyWindow(Window):
             else:
                 self.setAlert(response)
         except:
-            self.setAlert('Login timeout')
+            self.setAlert('Falha na Conexão')
             self.page1.button3.show()
             self.page2.button3.show()
             self.page3.navbar.buttons[2].show()
@@ -370,6 +483,8 @@ class MyWindow(Window):
             self.page2.button3.hide()
             self.page3.navbar.buttons[2].hide()
 
+            #
+
             Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'register'.encode('utf-8'))
             Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, username.encode('utf-8'))
             Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, password.encode('utf-8'))
@@ -380,7 +495,7 @@ class MyWindow(Window):
             else:
                 self.setAlert(response)
         except:
-            self.setAlert('Register timeout')
+            self.setAlert('Falha na Conexão')
             self.page1.button3.show()
             self.page2.button3.show()
             self.page3.navbar.buttons[2].show()

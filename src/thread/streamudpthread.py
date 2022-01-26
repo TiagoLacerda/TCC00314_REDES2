@@ -9,11 +9,16 @@ from requests import get as getPublicIP
 
 import sys
 
+
 class StreamUDPThread(QThread):
     logger = pyqtSignal(str)
 
-    def __init__(self, udpTarget, udpSocket, bufferSize):
+    def __init__(self, tcpTarget, tcpSocket, envoyLength, udpTarget, udpSocket, bufferSize):
         super().__init__()
+        self.tcpTarget = tcpTarget
+        self.tcpSocket = tcpSocket
+        self.envoyLength = envoyLength
+
         self.udpTarget = udpTarget
         self.udpSocket = udpSocket
         self.bufferSize = bufferSize
@@ -22,6 +27,8 @@ class StreamUDPThread(QThread):
 
         self.workers = {}    # address: {fullpath: str, thread: MediaSendThread}
         self.videoList = []  # (fullpath: '', title: '',    thumbnail: QPixmap)
+
+        self.lastKnownAddresses = {}
 
     def run(self):
         self.setPriority(QThread.Priority.HighPriority)
@@ -32,10 +39,13 @@ class StreamUDPThread(QThread):
         while not self.closing:
             try:
                 messages, address = Utility.recvUDPMessages(self.udpSocket, self.bufferSize)
-                command = messages[0].decode()
+                username = messages[0].decode()
+                command = messages[1].decode()
+
+                self.lastKnownAddresses[username] = address
 
                 if command == 'videoinfolist':
-                    self.log('{} says ["{}"]'.format(address, command))
+                    self.log('{} @ {} says ["{}", "{}"]'.format(username, address, username, command))
 
                     for item in self.videoList:
                         # https://stackoverflow.com/questions/57404778/how-to-convert-a-qpixmaps-image-into-a-bytes
@@ -49,15 +59,12 @@ class StreamUDPThread(QThread):
                         Utility.sendUDPMessages(self.udpSocket, address, data)
                     continue
 
-                if command == 'stream':  # ['stream', username, fullpath, width, height]
-                    username = messages[1].decode()
+                if command == 'stream':
                     fullpath = messages[2].decode()
                     w = int(messages[3].decode())
                     h = int(messages[4].decode())
 
-                    self.log('{} says ["{}", "{}", "{}", "{}", "{}"]'.format(address, command, username, fullpath, w, h))
-
-                    # TODO: If user is premium, start mediasendthread, else, send denial message
+                    self.log('{} @ {} says ["{}", "{}", "{}", "{}", "{}"]'.format(username, address, username, command, fullpath, w, h))
 
                     if address in self.workers:
                         self.workers[address]['thread'].close()
@@ -69,9 +76,62 @@ class StreamUDPThread(QThread):
                     self.workers[address] = {'fullpath': fullpath, 'thread': thread}
                     continue
 
+                if command == 'stream_group':
+                    fullpath = messages[2].decode()
+                    w = int(messages[3].decode())
+                    h = int(messages[4].decode())
+
+                    self.log('{} @ {} says ["{}", "{}", "{}", "{}", "{}"]'.format(username, address, username, command, fullpath, w, h))
+
+                    # Find addresses of logged in members
+
+                    Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'select_admin_by_member_or_admin'.encode('utf-8'))
+                    Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, username.encode('utf-8'))
+                    response = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+
+                    Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, 'select_members'.encode('utf-8'))
+                    Utility.sendTCPMessage(self.tcpSocket, self.envoyLength, response.encode('utf-8'))
+                    count = int(Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8'))
+
+                    members = []
+
+                    if count > 0:
+                        _ = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+                        for i in range(count - 1):
+                            name = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+                            _ = Utility.recvTCPMessage(self.tcpSocket, self.envoyLength).decode('utf-8')
+
+                            if name in self.lastKnownAddresses:
+                                members.append(self.lastKnownAddresses[name])
+
+                    # Start admin thread
+
+                    if address in self.workers:
+                        self.workers[address]['thread'].close()
+                        del self.workers[address]
+
+                    thread = MediaSendThread(address, self.udpSocket, self.bufferSize, w, h, fullpath)
+                    thread.logger.connect(self.log)
+                    thread.start()
+                    self.workers[address] = {'fullpath': fullpath, 'thread': thread}
+
+                    # Start member threads
+
+                    for member in members:
+                        if member in self.workers:
+                            self.workers[member]['thread'].close()
+                            del self.workers[member]
+
+                        thread = MediaSendThread(member, self.udpSocket, self.bufferSize, w, h, fullpath)
+                        thread.logger.connect(self.log)
+                        thread.start()
+                        self.workers[member] = {'fullpath': fullpath, 'thread': thread}
+
+                    continue
+
                 if command == 'cancel':
-                    self.log('{} says ["{}"]'.format(address, command))
-                    
+                    self.log('{} @ {} says ["{}", "{}"]'.format(username, address, username, command))
+
                     if address in self.workers:
                         self.workers[address]['thread'].close()
                         del self.workers[address]
@@ -88,8 +148,6 @@ class StreamUDPThread(QThread):
                 if address in self.workers:
                     self.workers[address]['thread'].close()
                     del self.workers[address]
-
-
 
     @pyqtSlot(str)
     def log(self, message):

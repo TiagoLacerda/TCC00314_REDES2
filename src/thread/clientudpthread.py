@@ -78,6 +78,10 @@ class ClientUDPThread(QThread):
                 if command == 'stream':     # Request stream response
                     self.log('{} says ["{}", ...]'.format(address, command))
 
+                    if self.mediaThread is not None:
+                        self.mediaThread.close()
+                        self.mediaThread = None
+
                     if messages[1].decode() != 'metadata':
                         continue
 
