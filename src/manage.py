@@ -335,8 +335,8 @@ class MyWindow(Window):
         dblocker = QMutex()
         envoyLength = 4
 
-        db.insertUser('admin', '1234', True)
-        db.insertUser('tiago', '1234', False)
+        # db.insertUser('admin', '1234', True)
+        # db.insertUser('tiago', '1234', False)
 
         tcpThread = TCPThread()
         tcpThread.logger.connect(self.log)
